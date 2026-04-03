@@ -10,7 +10,11 @@ const rewardRoutes = require('./routes/rewardRoutes');
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+  origin: process.env.ALLOWED_ORIGIN || 'http://localhost:3000',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 app.use(express.json());
 
 // Routes

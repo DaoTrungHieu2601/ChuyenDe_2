@@ -4,8 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthService extends ChangeNotifier {
-  static const String _baseUrl = 'http://10.0.2.2:3000/api';
-  // Dùng 'http://localhost:3000/api' nếu test trên iOS simulator hoặc web
+  static const String _baseUrl = 'http://localhost:3001/api';
 
   bool _isLoading = true;
   bool _isLoggedIn = false;

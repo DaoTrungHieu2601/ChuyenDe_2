@@ -11,7 +11,14 @@ const rewardRoutes = require('./routes/rewardRoutes');
 const app = express();
 
 app.use(cors({
-  origin: process.env.ALLOWED_ORIGIN || 'http://localhost:3000',
+  origin: (origin, callback) => {
+    // Cho phép requests không có origin (Postman, mobile) và mọi localhost
+    if (!origin || origin.startsWith('http://localhost')) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));

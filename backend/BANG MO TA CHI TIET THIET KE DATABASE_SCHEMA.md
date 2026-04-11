@@ -166,5 +166,3 @@ users ──┬──< user_progress >── words ──> topics
 Backend **`seedTopics.js`** / **`seedBadges.js`**: đồng bộ chủ đề, từ bổ sung và huy hiệu khi server chạy (idempotent với `INSERT IGNORE` / kiểm tra trùng từ).
 
 ---
-
-*Tài liệu này phản ánh trạng thái schema trong mã nguồn; nếu chỉnh SQL trong repo, nên cập nhật lại file này cho đồng bộ.*

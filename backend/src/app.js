@@ -1,18 +1,19 @@
 const express = require('express');
-const cors = require('cors');
+const cors    = require('cors');
 require('dotenv').config();
 
-const authRoutes = require('./routes/authRoutes');
-const topicRoutes = require('./routes/topicRoutes');
-const wordRoutes = require('./routes/wordRoutes');
-const progressRoutes = require('./routes/progressRoutes');
-const rewardRoutes = require('./routes/rewardRoutes');
+const authRoutes         = require('./routes/authRoutes');
+const topicRoutes        = require('./routes/topicRoutes');
+const wordRoutes         = require('./routes/wordRoutes');
+const progressRoutes     = require('./routes/progressRoutes');
+const rewardRoutes       = require('./routes/rewardRoutes');
+const quizRoutes         = require('./routes/quizRoutes');
+const learningPathRoutes = require('./routes/learningPathRoutes');
 
 const app = express();
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Cho phép requests không có origin (Postman, mobile) và mọi localhost
     if (!origin || origin.startsWith('http://localhost')) {
       callback(null, true);
     } else {
@@ -25,11 +26,13 @@ app.use(cors({
 app.use(express.json());
 
 // Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/topics', topicRoutes);
-app.use('/api/words', wordRoutes);
-app.use('/api/progress', progressRoutes);
-app.use('/api/rewards', rewardRoutes);
+app.use('/api/auth',          authRoutes);
+app.use('/api/topics',        topicRoutes);
+app.use('/api/words',         wordRoutes);
+app.use('/api/progress',      progressRoutes);
+app.use('/api/rewards',       rewardRoutes);
+app.use('/api/quiz',          quizRoutes);
+app.use('/api/learning-path', learningPathRoutes);
 
 // Health check
 app.get('/', (req, res) => {

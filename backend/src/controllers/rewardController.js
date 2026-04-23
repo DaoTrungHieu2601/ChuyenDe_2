@@ -1,84 +1,205 @@
 const pool = require('../config/database');
 
-// Lấy XP và danh sách badge của user
-const getRewards = async (req, res) => {
-  const userId = req.user.id;
+// Hàm trao XP và kiểm tra badge
+const awardXP = async (userId, xpAmount) => {
+  await pool.query('UPDATE users SET xp = xp + ? WHERE id = ?', [xpAmount, userId]);
+  const [[user]] = await pool.query('SELECT xp FROM users WHERE id = ?', [userId]);
+  await checkAndAwardBadges(userId, user.xp);
+};
 
+// Kiểm tra và trao badge tự động
+const checkAndAwardBadges = async (userId, currentXP) => {
+  // Badge theo XP
+  const xpBadges = ['xp_100', 'xp_500', 'xp_1000'];
+  for (const code of xpBadges) {
+    const [[badge]] = await pool.query('SELECT id, xp_required FROM badges WHERE code = ?', [code]);
+    if (badge && currentXP >= badge.xp_required) {
+      await pool.query(
+        'INSERT IGNORE INTO user_badges (user_id, badge_id) VALUES (?, ?)',
+        [userId, badge.id]
+      );
+    }
+  }
+
+  // Badge theo số từ đã học
+  const [[{ total }]] = await pool.query(
+    "SELECT COUNT(*) as total FROM user_progress WHERE user_id = ? AND status = 'learned'",
+    [userId]
+  );
+  if (total >= 1) await awardBadgeByCode(userId, 'first_word');
+  if (total >= 10) await awardBadgeByCode(userId, 'ten_words');
+  if (total >= 50) await awardBadgeByCode(userId, 'fifty_words');
+  if (total >= 100) await awardBadgeByCode(userId, 'hundred_words');
+
+  // Số bài quiz đã làm
+  const [[{ quizCount }]] = await pool.query(
+    'SELECT COUNT(*) AS quizCount FROM quiz_results WHERE user_id = ?',
+    [userId]
+  );
+  if (quizCount >= 5) await awardBadgeByCode(userId, 'five_quizzes');
+
+  // Quiz ở nhiều chủ đề khác nhau
+  const [[{ quizTopicDistinct }]] = await pool.query(
+    'SELECT COUNT(DISTINCT topic_id) AS quizTopicDistinct FROM quiz_results WHERE user_id = ?',
+    [userId]
+  );
+  if (quizTopicDistinct >= 3) await awardBadgeByCode(userId, 'quiz_three_topics');
+
+  // Đã học từ ở bao nhiêu chủ đề (độ phủ)
+  const [[{ distinctLearnedTopics }]] = await pool.query(
+    `SELECT COUNT(DISTINCT w.topic_id) AS distinctLearnedTopics
+     FROM user_progress up
+     INNER JOIN words w ON w.id = up.word_id
+     WHERE up.user_id = ? AND up.status = 'learned'`,
+    [userId]
+  );
+  const [[topicCountRow]] = await pool.query(
+    `SELECT COUNT(DISTINCT t.id) AS cnt FROM topics t
+     INNER JOIN words w ON w.topic_id = t.id`
+  );
+  const totalTopicCount = topicCountRow?.cnt ?? 0;
+  if (distinctLearnedTopics >= 2) await awardBadgeByCode(userId, 'topics_breadth_2');
+  if (distinctLearnedTopics >= 4) await awardBadgeByCode(userId, 'topics_breadth_4');
+  if (distinctLearnedTopics >= 6) await awardBadgeByCode(userId, 'topics_breadth_6');
+  if (distinctLearnedTopics >= 8) await awardBadgeByCode(userId, 'topics_breadth_8');
+  if (totalTopicCount > 0 && distinctLearnedTopics >= totalTopicCount) {
+    await awardBadgeByCode(userId, 'topics_breadth_all');
+  }
+
+  // Chủ đề đã hoàn thành 100% (danh sách id)
+  const [completedTopicRows] = await pool.query(
+    `SELECT t.id FROM topics t
+     WHERE (SELECT COUNT(*) FROM words w WHERE w.topic_id = t.id) > 0
+     AND (SELECT COUNT(*) FROM words w WHERE w.topic_id = t.id) = (
+       SELECT COUNT(*) FROM words w
+       INNER JOIN user_progress up ON w.id = up.word_id AND up.user_id = ? AND up.status = 'learned'
+       WHERE w.topic_id = t.id
+     )`,
+    [userId]
+  );
+  const topicsDone = completedTopicRows.length;
+  if (topicsDone >= 3) await awardBadgeByCode(userId, 'three_topics');
+  if (topicsDone >= 5) await awardBadgeByCode(userId, 'five_topics_done');
+  if (topicsDone >= 8) await awardBadgeByCode(userId, 'eight_topics_done');
+  if (topicsDone >= 10) await awardBadgeByCode(userId, 'ten_topics_done');
+  if (totalTopicCount > 0 && topicsDone >= totalTopicCount) {
+    await awardBadgeByCode(userId, 'all_topics_master');
+  }
+
+  for (const row of completedTopicRows) {
+    await awardBadgeByCode(userId, `topic_full_${row.id}`);
+  }
+};
+
+const awardBadgeByCode = async (userId, code) => {
+  const [[badge]] = await pool.query('SELECT id FROM badges WHERE code = ?', [code]);
+  if (badge) {
+    await pool.query(
+      'INSERT IGNORE INTO user_badges (user_id, badge_id) VALUES (?, ?)',
+      [userId, badge.id]
+    );
+  }
+};
+
+// Lấy danh sách badge của user
+const getUserBadges = async (req, res) => {
   try {
-    const [[user]] = await pool.query(
-      'SELECT xp, username FROM users WHERE id = ?',
-      [userId]
+    const [rows] = await pool.query(
+      `SELECT b.*, ub.earned_at,
+        CASE WHEN ub.id IS NOT NULL THEN 1 ELSE 0 END as earned
+       FROM badges b
+       LEFT JOIN user_badges ub ON b.id = ub.badge_id AND ub.user_id = ?
+       ORDER BY earned DESC, b.id`,
+      [req.user.id]
     );
-
-    const [allBadges] = await pool.query(
-      'SELECT id, code, name, description, icon, xp_required FROM badges ORDER BY id'
-    );
-
-    const [earned] = await pool.query(
-      'SELECT badge_id, earned_at FROM user_badges WHERE user_id = ?',
-      [userId]
-    );
-    const earnedMap = {};
-    earned.forEach(e => { earnedMap[e.badge_id] = e.earned_at; });
-
-    const badges = allBadges.map(b => ({
-      ...b,
-      earned: !!earnedMap[b.id],
-      earned_at: earnedMap[b.id] || null,
+    const [[user]] = await pool.query('SELECT xp FROM users WHERE id = ?', [req.user.id]);
+    const badges = rows.map((r) => ({
+      ...r,
+      earned: Number(r.earned) === 1,
     }));
-
-    const level = getLevelInfo(user.xp);
-
-    res.json({
-      username: user.username,
-      xp: user.xp,
-      level,
-      badges,
-    });
+    res.json({ xp: user.xp, badges });
   } catch (err) {
-    console.error('getRewards error:', err);
-    res.status(500).json({ message: 'Lỗi server' });
+    res.status(500).json({ message: 'Lỗi server', error: err.message });
   }
 };
 
-// Bảng xếp hạng (top 10 theo XP)
-const getLeaderboard = async (req, res) => {
+// Gợi ý lộ trình học
+const getLearningPath = async (req, res) => {
+  const userId = req.user.id;
   try {
-    const [rows] = await pool.query(`
-      SELECT id, username, xp,
-             RANK() OVER (ORDER BY xp DESC) AS \`rank\`
-      FROM users
-      ORDER BY xp DESC
-      LIMIT 10
-    `);
-    res.json({ leaderboard: rows });
+    // Lấy tất cả chủ đề và tiến độ
+    const [topics] = await pool.query(
+      `SELECT t.id, t.name,
+        COUNT(w.id) as total_words,
+        SUM(CASE WHEN up.status = 'learned' THEN 1 ELSE 0 END) as learned_words,
+        ROUND(SUM(CASE WHEN up.status = 'learned' THEN 1 ELSE 0 END) / COUNT(w.id) * 100) as percent
+       FROM topics t
+       LEFT JOIN words w ON t.id = w.topic_id
+       LEFT JOIN user_progress up ON w.id = up.word_id AND up.user_id = ?
+       GROUP BY t.id, t.name`,
+      [userId]
+    );
+
+    // Lấy quiz gần nhất theo chủ đề
+    const [quizResults] = await pool.query(
+      `SELECT topic_id, score, total,
+        ROUND(score / total * 100) as percent
+       FROM quiz_results
+       WHERE user_id = ?
+       ORDER BY created_at DESC`,
+      [userId]
+    );
+
+    const latestQuiz = {};
+    for (const q of quizResults) {
+      if (!latestQuiz[q.topic_id]) latestQuiz[q.topic_id] = q;
+    }
+
+    const suggestions = [];
+
+    for (const topic of topics) {
+      const quiz = latestQuiz[topic.id];
+      const percent = topic.percent || 0;
+
+      if (percent === 0) {
+        // Chưa bắt đầu
+        suggestions.push({
+          type: 'start',
+          topic_id: topic.id,
+          topic_name: topic.name,
+          message: `Bắt đầu học chủ đề "${topic.name}"`,
+          priority: 3,
+        });
+      } else if (percent < 100 && percent > 0) {
+        // Đang học dở
+        suggestions.push({
+          type: 'continue',
+          topic_id: topic.id,
+          topic_name: topic.name,
+          message: `Tiếp tục "${topic.name}" — đã học ${percent}%`,
+          priority: 1,
+        });
+      }
+
+      if (quiz && quiz.percent < 70) {
+        // Quiz điểm thấp → ôn lại
+        suggestions.push({
+          type: 'review',
+          topic_id: topic.id,
+          topic_name: topic.name,
+          message: `Ôn lại "${topic.name}" — quiz chỉ đạt ${quiz.percent}%`,
+          priority: 2,
+        });
+      }
+    }
+
+    // Sắp xếp theo priority (1 = quan trọng nhất)
+    suggestions.sort((a, b) => a.priority - b.priority);
+
+    res.json(suggestions.slice(0, 5)); // Tối đa 5 gợi ý
   } catch (err) {
-    console.error('getLeaderboard error:', err);
-    res.status(500).json({ message: 'Lỗi server' });
+    res.status(500).json({ message: 'Lỗi server', error: err.message });
   }
 };
 
-// ─── helper ───────────────────────────────────────────────────────────────────
-
-function getLevelInfo(xp) {
-  const levels = [
-    { level: 1, name: 'Người Mới Bắt Đầu', min: 0,    max: 99   },
-    { level: 2, name: 'Học Viên',           min: 100,  max: 299  },
-    { level: 3, name: 'Siêng Năng',         min: 300,  max: 599  },
-    { level: 4, name: 'Học Giả',            min: 600,  max: 999  },
-    { level: 5, name: 'Bậc Thầy',           min: 1000, max: Infinity },
-  ];
-
-  const current = levels.findLast(l => xp >= l.min) || levels[0];
-  const next = levels.find(l => l.min > xp);
-
-  return {
-    level: current.level,
-    name: current.name,
-    xp_current: xp,
-    xp_next_level: next ? next.min : null,
-    xp_needed: next ? next.min - xp : 0,
-  };
-}
-
-module.exports = { getRewards, getLeaderboard };
+module.exports = { awardXP, awardBadgeByCode, getUserBadges, getLearningPath };

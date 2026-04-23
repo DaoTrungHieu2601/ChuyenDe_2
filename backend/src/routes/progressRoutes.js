@@ -1,12 +1,11 @@
 const express = require('express');
-const router  = express.Router();
-const { getOverallProgress, getProgressByTopic, markWordStatus } = require('../controllers/progressController');
-const authMiddleware = require('../middleware/auth');
+const router = express.Router();
+const { saveProgress, getProgressByTopic, saveQuizResult, getStats } = require('../controllers/progressController');
+const auth = require('../middleware/auth');
 
-router.use(authMiddleware);
-
-router.get('/',              getOverallProgress);
-router.get('/topic/:topicId', getProgressByTopic);
-router.post('/mark',          markWordStatus);
+router.post('/', auth, saveProgress);
+router.get('/topic/:topicId', auth, getProgressByTopic);
+router.post('/quiz', auth, saveQuizResult);
+router.get('/stats', auth, getStats);
 
 module.exports = router;

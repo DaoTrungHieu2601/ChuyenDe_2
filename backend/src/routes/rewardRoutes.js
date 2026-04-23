@@ -1,11 +1,9 @@
 const express = require('express');
-const router  = express.Router();
-const { getRewards, getLeaderboard } = require('../controllers/rewardController');
-const authMiddleware = require('../middleware/auth');
+const router = express.Router();
+const { getUserBadges, getLearningPath } = require('../controllers/rewardController');
+const auth = require('../middleware/auth');
 
-router.use(authMiddleware);
-
-router.get('/',            getRewards);
-router.get('/leaderboard', getLeaderboard);
+router.get('/badges', auth, getUserBadges);
+router.get('/learning-path', auth, getLearningPath);
 
 module.exports = router;

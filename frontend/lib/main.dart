@@ -43,7 +43,8 @@ class MyApp extends StatelessWidget {
             background: AppColors.background,
           ),
           scaffoldBackgroundColor: AppColors.background,
-          fontFamily: 'Roboto',
+          // Không đặt fontFamily tùy ý (vd. Roboto) nếu chưa khai báo trong pubspec —
+          // trên Web/Desktop có thể khiến chữ tiếng Việt / icon Material không hiển thị.
           useMaterial3: true,
           cardTheme: CardThemeData(
             elevation: 0,

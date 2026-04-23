@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Node.js
 backend/node_modules/
 backend/.env
@@ -18,3 +19,45 @@ frontend/pubspec.lock
 # OS
 .DS_Store
 Thumbs.db
+=======
+# ========================
+# BACKEND (Node.js)
+# ========================
+backend/node_modules/
+backend/.env
+backend/*.log
+
+# ========================
+# FRONTEND (Flutter)
+# ========================
+frontend/.dart_tool/
+frontend/.flutter-plugins
+frontend/.flutter-plugins-dependencies
+frontend/.pub-cache/
+frontend/.pub/
+frontend/build/
+frontend/.packages
+frontend/pubspec.lock
+
+# ========================
+# DATABASE
+# ========================
+*.sql.bak
+
+# ========================
+# HỆ THỐNG
+# ========================
+.DS_Store
+Thumbs.db
+desktop.ini
+*.tmp
+*.log
+
+# ========================
+# IDE
+# ========================
+.vscode/settings.json
+.idea/
+*.suo
+*.user
+>>>>>>> aaa4a482cf67f2575bf2fb09c909a17b24b2ea30

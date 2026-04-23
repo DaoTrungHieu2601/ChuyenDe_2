@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import 'package:flutter/material.dart';
 import '../../data/mock_data.dart';
 import '../flashcard/flashcard_screen.dart';
@@ -356,3 +357,6 @@ class _WordItemState extends State<_WordItem> {
     );
   }
 }
+=======
+ 
+>>>>>>> aaa4a482cf67f2575bf2fb09c909a17b24b2ea30

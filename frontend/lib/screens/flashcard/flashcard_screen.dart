@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../data/mock_data.dart';
@@ -497,3 +498,6 @@ class _CircleBtn extends StatelessWidget {
     );
   }
 }
+=======
+ 
+>>>>>>> aaa4a482cf67f2575bf2fb09c909a17b24b2ea30

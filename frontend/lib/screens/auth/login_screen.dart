@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+<<<<<<< HEAD
+=======
+import '../../main.dart';
+>>>>>>> aaa4a482cf67f2575bf2fb09c909a17b24b2ea30
 import '../../services/auth_service.dart';
 import 'register_screen.dart';
 
@@ -10,6 +14,7 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
+<<<<<<< HEAD
 class _LoginScreenState extends State<LoginScreen>
     with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
@@ -41,11 +46,23 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   void dispose() {
     _animCtrl.dispose();
+=======
+class _LoginScreenState extends State<LoginScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _emailCtrl = TextEditingController();
+  final _passwordCtrl = TextEditingController();
+  bool _isLoading = false;
+  bool _obscurePassword = true;
+
+  @override
+  void dispose() {
+>>>>>>> aaa4a482cf67f2575bf2fb09c909a17b24b2ea30
     _emailCtrl.dispose();
     _passwordCtrl.dispose();
     super.dispose();
   }
 
+<<<<<<< HEAD
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
@@ -81,11 +98,32 @@ class _LoginScreenState extends State<LoginScreen>
         margin: const EdgeInsets.all(16),
       ),
     );
+=======
+  Future<void> _login() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _isLoading = true);
+    final result = await context.read<AuthService>().login(
+      _emailCtrl.text.trim(),
+      _passwordCtrl.text,
+    );
+    if (mounted) {
+      setState(() => _isLoading = false);
+      if (!result['success']) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(result['message']),
+          backgroundColor: AppColors.secondary,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ));
+      }
+    }
+>>>>>>> aaa4a482cf67f2575bf2fb09c909a17b24b2ea30
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+<<<<<<< HEAD
       backgroundColor: const Color(0xFF4D8EFF),
       body: Column(
         children: [
@@ -289,6 +327,100 @@ class _LoginScreenState extends State<LoginScreen>
                 ),
               ),
               const SizedBox(height: 8),
+=======
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              // Header gradient
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(32, 60, 32, 48),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [AppColors.primary, AppColors.primaryDark],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(40),
+                    bottomRight: Radius.circular(40),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Text('📚', style: TextStyle(fontSize: 32)),
+                    ),
+                    const SizedBox(height: 24),
+                    const Text('Chào mừng\ntrở lại!',
+                        style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white, height: 1.2)),
+                    const SizedBox(height: 8),
+                    Text('Tiếp tục hành trình học từ vựng',
+                        style: TextStyle(fontSize: 15, color: Colors.white.withOpacity(0.8))),
+                  ],
+                ),
+              ),
+
+              // Form
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const SizedBox(height: 8),
+                      _buildInput(
+                        controller: _emailCtrl,
+                        label: 'Email',
+                        icon: Icons.email_outlined,
+                        keyboardType: TextInputType.emailAddress,
+                        validator: (v) => v!.isEmpty ? 'Vui lòng nhập email' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildInput(
+                        controller: _passwordCtrl,
+                        label: 'Mật khẩu',
+                        icon: Icons.lock_outline,
+                        obscure: _obscurePassword,
+                        keyboardType: TextInputType.visiblePassword,
+                        suffix: IconButton(
+                          icon: Icon(_obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                              color: AppColors.textGrey, size: 20),
+                          onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                        ),
+                        validator: (v) => v!.isEmpty ? 'Vui lòng nhập mật khẩu' : null,
+                      ),
+                      const SizedBox(height: 28),
+                      _buildPrimaryButton(
+                        label: 'Đăng nhập',
+                        isLoading: _isLoading,
+                        onPressed: _login,
+                      ),
+                      const SizedBox(height: 20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text('Chưa có tài khoản? ', style: TextStyle(color: AppColors.textGrey)),
+                          GestureDetector(
+                            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RegisterScreen())),
+                            child: const Text('Đăng ký', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+>>>>>>> aaa4a482cf67f2575bf2fb09c909a17b24b2ea30
             ],
           ),
         ),
@@ -296,6 +428,7 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
+<<<<<<< HEAD
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
@@ -303,10 +436,20 @@ class _LoginScreenState extends State<LoginScreen>
     TextInputType keyboardType = TextInputType.text,
     bool obscureText = false,
     Widget? suffixIcon,
+=======
+  Widget _buildInput({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    bool obscure = false,
+    TextInputType? keyboardType,
+    Widget? suffix,
+>>>>>>> aaa4a482cf67f2575bf2fb09c909a17b24b2ea30
     String? Function(String?)? validator,
   }) {
     return TextFormField(
       controller: controller,
+<<<<<<< HEAD
       keyboardType: keyboardType,
       obscureText: obscureText,
       validator: validator,
@@ -391,6 +534,50 @@ class _LoginScreenState extends State<LoginScreen>
                   letterSpacing: 1,
                 ),
               ),
+=======
+      obscureText: obscure,
+      keyboardType: keyboardType,
+      style: const TextStyle(color: AppColors.textDark, fontSize: 15),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(color: AppColors.textGrey, fontSize: 14),
+        prefixIcon: Icon(icon, color: AppColors.textGrey, size: 20),
+        suffixIcon: suffix,
+        filled: true,
+        fillColor: AppColors.card,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: AppColors.border),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: AppColors.border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      ),
+      validator: validator,
+    );
+  }
+
+  Widget _buildPrimaryButton({required String label, required bool isLoading, required VoidCallback onPressed}) {
+    return SizedBox(
+      height: 54,
+      child: ElevatedButton(
+        onPressed: isLoading ? null : onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        ),
+        child: isLoading
+            ? const SizedBox(height: 22, width: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+            : Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+>>>>>>> aaa4a482cf67f2575bf2fb09c909a17b24b2ea30
       ),
     );
   }

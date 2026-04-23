@@ -1,0 +1,166 @@
+MÔ TẢ CHI TIẾT THIẾT KẾ DATABASE (DẠNG BẢNG) - vocab_app [cite: 1]
+
+I. THÔNG TIN CHUNG
+| Thành phần | Giá trị |
+|---|---|
+| Hệ quản trị CSDL | MySQL [cite: 2] |
+| Tên database | vocab_app [cite: 2] |
+| Charset | utf8mb4 [cite: 2] |
+| Collation | utf8mb4_unicode_ci [cite: 3] |
+
+II. THIẾT KẾ CHI TIẾT TỪNG BẢNG
+
+1) BẢNG users
+
+Vai trò: Lưu thông tin tài khoản và XP của người dùng. [cite: 3]
+| Cột | Kiểu dữ liệu | Ràng buộc | Mô tả |
+|---|---|---|---|
+| id | INT | PK, AUTO_INCREMENT | Mã định danh user [cite: 4, 5] |
+| username | VARCHAR(100) | NOT NULL | Tên hiển thị [cite: 5] |
+| email | VARCHAR(150) | NOT NULL, UNIQUE | Email đăng nhập, không trùng [cite: 6] |
+| password | VARCHAR(255) | NOT NULL | Mật khẩu đã hash [cite: 6, 7] |
+| xp | INT | DEFAULT 0 | Điểm kinh nghiệm tích lũy [cite: 7, 8] |
+| created_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Thời điểm tạo tài khoản [cite: 8] |
+
+| Nội dung | Chi tiết |
+|---|---|
+| Quan hệ đến bảng khác | 1-n với user_progress, quiz_results, user_badges [cite: 9, 10] |
+| Hành vi xóa | Bị xóa sẽ xóa dữ liệu phụ thuộc (CASCADE) [cite: 10, 11] |
+| Truy vấn phổ biến | Đăng ký, đăng nhập, cập nhật XP, lấy profile [cite: 11, 12] |
+-------------------------------------------------- [cite: 12]
+
+2) BẢNG topics
+
+Vai trò: Danh mục chủ đề học từ vựng. [cite: 13]
+
+| Cột | Kiểu dữ liệu | Ràng buộc | Mô tả |
+|---|---|---|---|
+| id | INT | PK, AUTO_INCREMENT | Mã chủ đề [cite: 14] |
+| name | VARCHAR(100) | NOT NULL | Tên chủ đề [cite: 14, 15] |
+| description | TEXT | NULL | Mô tả chủ đề [cite: 15, 16] |
+| image_url | VARCHAR(255) | NULL | Ảnh đại diện [cite: 16] |
+| created_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Thời điểm tạo [cite: 16, 17] |
+
+| Nội dung | Chi tiết |
+|---|---|
+| Quan hệ đến bảng khác | 1-n với words, 1-n với quiz_results [cite: 18] |
+| Hành vi xóa | Xóa topic -> words và quiz_results liên quan bị xóa theo [cite: 18, 19] |
+| Truy vấn phổ biến | Lấy danh sách chủ đề, thống kê số từ mỗi chủ đề [cite: 19, 20] |
+-------------------------------------------------- [cite: 20]
+
+3) BẢNG words
+
+Vai trò: Lưu nội dung từ vựng theo chủ đề. [cite: 21]
+
+| Cột | Kiểu dữ liệu | Ràng buộc | Mô tả |
+|---|---|---|---|
+| id | INT | PK, AUTO_INCREMENT | Mã từ vựng [cite: 22] |
+| topic_id | INT | NOT NULL, FK -> topics(id) | Từ này thuộc chủ đề nào [cite: 22, 23] |
+| english | VARCHAR(100) | NOT NULL | Từ tiếng Anh [cite: 23, 24] |
+| vietnamese | VARCHAR(200) | NOT NULL | Nghĩa tiếng Việt [cite: 24, 25] |
+| pronunciation | VARCHAR(100) | NULL | Phiên âm IPA [cite: 25] |
+| example_en | TEXT | NULL | Câu ví dụ tiếng Anh [cite: 25, 26] |
+| example_vi | TEXT | NULL | Câu ví dụ tiếng Việt [cite: 26, 27] |
+| image_url | VARCHAR(255) | NULL | Ảnh minh họa từ [cite: 27] |
+| created_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Thời điểm tạo [cite: 27, 28] |
+
+| Nội dung | Chi tiết |
+|---|---|
+| Quan hệ đến bảng khác | n-1 với topics, 1-n với user_progress [cite: 28, 29] |
+| Hành vi xóa | Xóa topic cha -> words bị xóa theo (CASCADE) [cite: 29, 30] |
+| Truy vấn phổ biến | Lấy words theo topic, tìm kiếm từ, lấy chi tiết từ [cite: 30, 31] |
+-------------------------------------------------- [cite: 31]
+
+4) BẢNG user_progress
+
+Vai trò: Bảng liên kết users-words để theo dõi trạng thái học. [cite: 32]
+
+| Cột | Kiểu dữ liệu | Ràng buộc | Mô tả |
+|---|---|---|---|
+| id | INT | PK, AUTO_INCREMENT | Mã bản ghi tiến trình [cite: 33, 34] |
+| user_id | INT | NOT NULL, FK -> users(id) | Người học [cite: 34] |
+| word_id | INT | NOT NULL, FK -> words(id) | Từ đang học/đã học [cite: 35] |
+| status | ENUM('learning','learned') | DEFAULT 'learning' | Trạng thái học [cite: 35, 36] |
+| learned_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Thời điểm cập nhật [cite: 36, 37] |
+
+| Nội dung | Chi tiết |
+|---|---|
+| UNIQUE | (user_id, word_id) để không trùng cặp user-từ [cite: 37, 38] |
+| Quan hệ đến bảng khác | n-1 với users, n-1 với words [cite: 38, 39] |
+| Truy vấn phổ biến | Upsert tiến trình, đếm số từ đã học theo user/topic [cite: 39, 40] |
+-------------------------------------------------- [cite: 40]
+
+5) BẢNG quiz_results
+
+Vai trò: Lưu lịch sử kết quả quiz của user theo chủ đề. [cite: 41]
+
+| Cột | Kiểu dữ liệu | Ràng buộc | Mô tả |
+|---|---|---|---|
+| id | INT | PK, AUTO_INCREMENT | Mã kết quả quiz [cite: 42, 43] |
+| user_id | INT | NOT NULL, FK -> users(id) | User làm quiz [cite: 43] |
+| topic_id | INT | NOT NULL, FK -> topics(id) | Chủ đề quiz [cite: 44] |
+| score | INT | NOT NULL | Điểm đạt được [cite: 44, 45] |
+| total | INT | NOT NULL | Tổng điểm/tổng câu hỏi [cite: 45] |
+| created_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Thời điểm nộp bài [cite: 45, 46] |
+
+| Nội dung | Chi tiết |
+|---|---|
+| Kiểu dữ liệu nghiệp vụ | Lịch sử (mỗi lần làm quiz tạo 1 dòng mới) [cite: 47] |
+| Quan hệ đến bảng khác | n-1 với users, n-1 với topics [cite: 47, 48] |
+| Truy vấn phổ biến | Lấy lịch sử quiz, tính điểm trung bình, đếm số lần quiz [cite: 48, 49] |
+-------------------------------------------------- [cite: 49]
+
+6) BẢNG badges
+
+Vai trò: Danh mục định nghĩa huy hiệu. [cite: 50]
+
+| Cột | Kiểu dữ liệu | Ràng buộc | Mô tả |
+|---|---|---|---|
+| id | INT | PK, AUTO_INCREMENT | Mã huy hiệu [cite: 51] |
+| code | VARCHAR(50) | NOT NULL, UNIQUE | Mã nghiệp vụ để check rule [cite: 51, 52] |
+| name | VARCHAR(100) | NOT NULL | Tên huy hiệu [cite: 52, 53] |
+| description | TEXT | NULL | Mô tả điều kiện đạt [cite: 53] |
+| icon | VARCHAR(50) | NULL | Icon/emoji huy hiệu [cite: 53, 54] |
+| xp_required | INT | DEFAULT 0 | Ngưỡng XP nếu áp dụng [cite: 54, 55] |
+
+| Nội dung | Chi tiết |
+|---|---|
+| Quan hệ đến bảng khác | 1-n với user_badges [cite: 55, 56] |
+| Truy vấn phổ biến | Lấy danh mục badge, tìm badge theo code [cite: 56, 57] |
+| Nguồn tạo dữ liệu | update_rewards.sql, seedBadges.js [cite: 57] |
+-------------------------------------------------- [cite: 57]
+
+7) BẢNG user_badges
+
+Vai trò: Bảng liên kết users-badges, ghi nhận huy hiệu đã đạt. [cite: 58]
+
+| Cột | Kiểu dữ liệu | Ràng buộc | Mô tả |
+|---|---|---|---|
+| id | INT | PK, AUTO_INCREMENT | Mã bản ghi nhận huy hiệu [cite: 59, 60] |
+| user_id | INT | NOT NULL, FK -> users(id) | User đạt huy hiệu [cite: 60, 61] |
+| badge_id | INT | NOT NULL, FK -> badges(id) | Huy hiệu đạt được [cite: 61, 62] |
+| earned_at | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Thời điểm nhận [cite: 62] |
+
+| Nội dung | Chi tiết |
+|---|---|
+| UNIQUE | (user_id, badge_id), mỗi huy hiệu chỉ nhận 1 lần/user [cite: 63] |
+| Quan hệ đến bảng khác | n-1 với users, n-1 với badges [cite: 63, 64] |
+| Truy vấn phổ biến | Cấp badge mới, lấy danh sách badge của user [cite: 64, 65] |
+
+III. BẢNG QUAN HỆ TỔNG HỢP
+| Bảng cha | Kiểu quan hệ | Bảng con | Khóa liên kết | Xóa dây chuyền |
+|---|---|---|---|---|
+| topics | 1-n | words | words.topic_id -> topics.id | Có (CASCADE) [cite: 66, 67] |
+| users | 1-n | user_progress | user_progress.user_id -> users.id | Có (CASCADE) [cite: 67, 68] |
+| words | 1-n | user_progress | user_progress.word_id -> words.id | Có (CASCADE) [cite: 68, 69] |
+| users | 1-n | quiz_results | quiz_results.user_id -> users.id | Có (CASCADE) [cite: 69] |
+| topics | 1-n | quiz_results | quiz_results.topic_id -> topics.id | Có (CASCADE) [cite: 69, 70] |
+| users | 1-n | user_badges | user_badges.user_id -> users.id | Có (CASCADE) [cite: 70, 71] |
+| badges | 1-n | user_badges | user_badges.badge_id -> badges.id | Có (CASCADE) [cite: 71, 72] |
+
+IV. ĐỀ XUẤT CHỈ SỐ (INDEX) BỔ SUNG
+| Bảng | Cột để index | Lý do |
+|---|---|---|
+| words | topic_id | Lấy từ theo chủ đề nhanh hơn [cite: 72, 73] |
+| user_progress | user_id, status | Thống kê tiến trình theo user nhanh hơn [cite: 73, 74] |
+| quiz_results | user_id, created_at | Lấy lịch sử quiz gần nhất nhanh hơn [cite: 74, 75] |

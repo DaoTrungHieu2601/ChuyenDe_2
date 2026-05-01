@@ -162,10 +162,25 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
                           icon: Icons.quiz_rounded,
                           label: 'Quiz',
                           color: Colors.orange,
-                          onTap: _words.length < 4 ? null : () => Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => QuizScreen(words: _words, topic: widget.topic)),
-                          ).then((_) => _loadWords()),
+                          onTap: () {
+                            final learnedWords = _words.where((w) => _learnedIds.contains(w['id'])).toList();
+                            if (learnedWords.length < 10) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(learnedWords.isEmpty
+                                      ? 'Bạn chưa học từ nào. Hãy học ít nhất 10 từ trước khi làm quiz'
+                                      : 'Bạn cần học ít nhất 10 từ để làm quiz (hiện có ${learnedWords.length} từ)'),
+                                  behavior: SnackBarBehavior.floating,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                              );
+                              return;
+                            }
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => QuizScreen(words: learnedWords, topic: widget.topic)),
+                            ).then((_) => _loadWords());
+                          },
                         )),
                       ],
                     ),
@@ -321,17 +336,30 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
                               icon: Icons.quiz_rounded,
                               label: 'Quiz ôn',
                               color: accent,
-                              onTap: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => QuizScreen(
-                                    words: subset,
-                                    topic: widget.topic,
-                                    meaningDistractorPool: _words,
-                                    isWrongWordsReview: true,
+                              onTap: () {
+                                final learnedWords = _words.where((w) => _learnedIds.contains(w['id'])).toList();
+                                if (learnedWords.length < 4) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: const Text('Bạn cần học ít nhất 4 từ để ôn từ sai'),
+                                      behavior: SnackBarBehavior.floating,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                    ),
+                                  );
+                                  return;
+                                }
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => QuizScreen(
+                                      words: subset,
+                                      topic: widget.topic,
+                                      meaningDistractorPool: learnedWords,
+                                      isWrongWordsReview: true,
+                                    ),
                                   ),
-                                ),
-                              ).then((_) => _loadWords()),
+                                ).then((_) => _loadWords());
+                              },
                             ),
                           ),
                         ],

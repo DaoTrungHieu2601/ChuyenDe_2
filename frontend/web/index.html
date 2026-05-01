@@ -43,5 +43,60 @@
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
   <script src="flutter_bootstrap.js" async></script>
+  <script>
+    window.speechRecognizer = {
+      _recognition: null,
+      _isListening: false,
+
+      isSupported: function() {
+        return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+      },
+
+      start: function(expectedWord, onResult) {
+        if (this._isListening) this.stop();
+        var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) { onResult('NOT_SUPPORTED', 0); return; }
+
+        var rec = new SpeechRecognition();
+        rec.lang = 'en-US';
+        rec.interimResults = false;
+        rec.maxAlternatives = 3;
+        this._recognition = rec;
+        this._isListening = true;
+
+        rec.onresult = function(event) {
+          var best = '';
+          var bestScore = 0;
+          var expected = expectedWord.trim().toLowerCase();
+          for (var i = 0; i < event.results[0].length; i++) {
+            var transcript = event.results[0][i].transcript.trim().toLowerCase();
+            var confidence = event.results[0][i].confidence || 0;
+            if (transcript === expected) { best = transcript; bestScore = 1.0; break; }
+            if (confidence > bestScore) { best = transcript; bestScore = confidence; }
+          }
+          var score = (best === expected) ? 1.0 : bestScore * 0.5;
+          onResult(best, Math.round(score * 100));
+        };
+
+        rec.onerror = function(event) {
+          onResult('ERROR:' + event.error, 0);
+        };
+
+        rec.onend = function() {
+          window.speechRecognizer._isListening = false;
+        };
+
+        rec.start();
+      },
+
+      stop: function() {
+        if (this._recognition) {
+          try { this._recognition.stop(); } catch(e) {}
+          this._recognition = null;
+        }
+        this._isListening = false;
+      }
+    };
+  </script>
 </body>
 </html>

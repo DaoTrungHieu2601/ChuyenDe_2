@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../main.dart';
 import '../../services/auth_service.dart';
 import '../../services/api_service.dart';
+import '../../services/speech_service.dart';
 
 class FlashcardScreen extends StatefulWidget {
   final List<dynamic> words;
@@ -27,6 +28,10 @@ class _FlashcardScreenState extends State<FlashcardScreen> with SingleTickerProv
   late AnimationController _animController;
   late Animation<double> _animation;
   final FlutterTts _tts = FlutterTts();
+
+  bool _isListening = false;
+  int? _speechScore;
+  String _speechTranscript = '';
 
   @override
   void initState() {
@@ -56,6 +61,7 @@ class _FlashcardScreenState extends State<FlashcardScreen> with SingleTickerProv
   @override
   void dispose() {
     _tts.stop();
+    SpeechService.stop();
     _animController.dispose();
     super.dispose();
   }
@@ -72,17 +78,39 @@ class _FlashcardScreenState extends State<FlashcardScreen> with SingleTickerProv
   void _next() {
     if (_currentIndex < widget.words.length - 1) {
       _tts.stop();
+      SpeechService.stop();
       _animController.reset();
-      setState(() { _currentIndex++; _isFlipped = false; });
+      setState(() { _currentIndex++; _isFlipped = false; _speechScore = null; _speechTranscript = ''; _isListening = false; });
     }
   }
 
   void _prev() {
     if (_currentIndex > 0) {
       _tts.stop();
+      SpeechService.stop();
       _animController.reset();
-      setState(() { _currentIndex--; _isFlipped = false; });
+      setState(() { _currentIndex--; _isFlipped = false; _speechScore = null; _speechTranscript = ''; _isListening = false; });
     }
+  }
+
+  Future<void> _startSpeechPractice(String word) async {
+    if (_isListening) return;
+    if (!SpeechService.isSupported) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: const Text('Trình duyệt không hỗ trợ nhận giọng nói. Hãy dùng Chrome.'),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ));
+      return;
+    }
+    setState(() { _isListening = true; _speechScore = null; _speechTranscript = ''; });
+    final result = await SpeechService.recognize(word);
+    if (!mounted) return;
+    setState(() {
+      _isListening = false;
+      _speechTranscript = result.transcript;
+      _speechScore = result.score;
+    });
   }
 
   Future<void> _markLearned() async {
@@ -178,34 +206,65 @@ class _FlashcardScreenState extends State<FlashcardScreen> with SingleTickerProv
                 ],
               ),
               const SizedBox(height: 16),
-              Center(
-                child: Material(
-                  color: AppColors.primary.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(14),
-                  child: InkWell(
-                    onTap: () => _speakEnglish(word['english'] as String?),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Material(
+                    color: AppColors.primary.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(14),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.volume_up_rounded, color: AppColors.primary, size: 22),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Nghe phát âm',
-                            style: TextStyle(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
+                    child: InkWell(
+                      onTap: () => _speakEnglish(word['english'] as String?),
+                      borderRadius: BorderRadius.circular(14),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.volume_up_rounded, color: AppColors.primary, size: 20),
+                            const SizedBox(width: 6),
+                            Text('Nghe', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600, fontSize: 14)),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
+                  const SizedBox(width: 10),
+                  Material(
+                    color: (_isListening ? Colors.red : Colors.deepPurple).withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(14),
+                    child: InkWell(
+                      onTap: _isListening ? null : () => _startSpeechPractice(word['english'] as String? ?? ''),
+                      borderRadius: BorderRadius.circular(14),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              _isListening ? Icons.graphic_eq_rounded : Icons.mic_rounded,
+                              color: _isListening ? Colors.red : Colors.deepPurple,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              _isListening ? 'Đang nghe...' : 'Luyện phát âm',
+                              style: TextStyle(
+                                color: _isListening ? Colors.red : Colors.deepPurple,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
+              if (_speechScore != null) ...[
+                const SizedBox(height: 10),
+                _buildSpeechResult(word['english'] as String? ?? ''),
+              ],
               const SizedBox(height: 16),
 
               // Card
@@ -264,6 +323,36 @@ class _FlashcardScreenState extends State<FlashcardScreen> with SingleTickerProv
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildSpeechResult(String expected) {
+    final score = _speechScore!;
+    final isGood = score >= 70;
+    final isFail = _speechTranscript.startsWith('ERROR') || _speechTranscript == 'TIMEOUT' || _speechTranscript == 'NOT_SUPPORTED';
+    final color = isFail ? Colors.orange : (isGood ? AppColors.success : Colors.red);
+    final icon = isFail ? Icons.warning_amber_rounded : (isGood ? Icons.check_circle_rounded : Icons.cancel_rounded);
+    final label = isFail
+        ? 'Không nhận được giọng nói. Thử lại.'
+        : (isGood ? 'Tốt lắm! ($score%)' : 'Chưa đúng ($score%) — Bạn nói: "$_speechTranscript"');
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: color, size: 18),
+          const SizedBox(width: 8),
+          Flexible(child: Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 13))),
+        ],
       ),
     );
   }
